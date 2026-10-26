@@ -22,4 +22,5 @@ manifest=root/"src/main/AndroidManifest.xml"
 data=manifest.read_text()
 data=data.replace('com.v2ray.ang.action.widget.click','${applicationId}.action.widget.click').replace('com.v2ray.ang.action.activity','${applicationId}.action.activity')
 manifest.write_text(data)
-print("Applied SASAN VPN legacy branding and explicit Xray mode.")
+edit(Path(sys.argv[1])/"V2rayNG"/"gradle"/"libs.versions.toml", 'module = "com.github.tbruyelle:rxpermissions"', 'module = "com.github.tbruyelle:RxPermissions"')
+print("Applied SASAN VPN legacy branding, Xray mode, and historical RxPermissions artifact correction.")
