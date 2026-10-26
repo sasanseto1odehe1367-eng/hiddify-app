@@ -27,7 +27,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      CHANNEL: prod
       IS_GITHUB_ACTIONS: "1"
     steps:
       - name: Checkout the source
@@ -62,9 +61,13 @@ jobs:
             sasan-gradle-${{ runner.os }}-
 
       - name: Prepare Flutter dependencies and Android VPN core
+        env:
+          CHANNEL: prod
         run: make android-apk-prepare
 
       - name: Build Android production-mode test APK
+        env:
+          CHANNEL: prod
         # No private credentials are embedded. Signed with the standard Android
         # debug signing fallback when no private signing keys are configured.
         run: flutter build apk --release --target lib/main_prod.dart
