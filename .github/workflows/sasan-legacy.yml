@@ -59,14 +59,32 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:assemblePlaystoreDebug --no-daemon --stacktrace
-      - name: Package APK/checksum
+      - name: Package and validate universal APK for Android phones
+        shell: bash
         run: |
-          mkdir dist
-          APK=$(find upstream/V2rayNG/app/build/outputs/apk -type f -name '*playstore*debug*.apk' | head -1)
-          if [ -z "$APK" ]; then APK=$(find upstream/V2rayNG/app/build/outputs/apk -type f -name '*.apk' | head -1); fi
-          test -n "$APK" && test -s "$APK"
-          cp "$APK" dist/SASAN-Xray-24.12.31-debug.apk
-          (cd dist && sha256sum SASAN-Xray-24.12.31-debug.apk > SHA256SUMS.txt)
+          set -euo pipefail
+          mkdir -p dist
+          echo "APK build outputs:"
+          find upstream/V2rayNG/app/build/outputs/apk -type f -name '*.apk' -print
+          # Historical Gradle config emits ABI-specific APKs and one universal
+          # APK. The old workflow chose the FIRST arbitrary APK, which could
+          # be x86 and fail installation on an ARM Android phone.
+          APK=$(find upstream/V2rayNG/app/build/outputs/apk -type f -name '*universal*.apk' -print -quit)
+          if [ -z "$APK" ] || [ ! -s "$APK" ]; then
+            echo "::error::Universal APK missing. Refuse to ship an arbitrary ABI-specific APK."
+            exit 1
+          fi
+          echo "Selected universal APK: $APK"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$AAPT" dump badging "$APK" | grep -E '^(package:|sdkVersion:|targetSdkVersion:|native-code:)'
+          "$APKSIGNER" verify --verbose "$APK"
+          unzip -Z1 "$APK" | grep -m1 -E '^lib/arm64-v8a/' || {
+            echo "::error::ARM64 native libraries missing from selected APK"
+            exit 1
+          }
+          cp "$APK" dist/SASAN-Xray-24.12.31-universal-debug.apk
+          (cd dist && sha256sum SASAN-Xray-24.12.31-universal-debug.apk > SHA256SUMS.txt)
       - uses: actions/upload-artifact@v4
         with:
           name: SASAN-Xray-24.12.31-test
