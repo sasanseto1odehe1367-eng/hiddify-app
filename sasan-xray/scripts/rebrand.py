@@ -34,8 +34,8 @@ def main() -> None:
     )
     replace_once(
         module / "src/main/AndroidManifest.xml",
-        'android:icon="@mipmap/ic_launcher"',
-        'android:icon="@drawable/sasan_vpn_icon"',
+        'android:icon="@mipmap/ic_launcher"\n        android:label="@string/app_name"',
+        'android:icon="@drawable/sasan_vpn_icon"\n        android:label="@string/app_name"',
     )
     # The original Kotlin package and JNI library identifiers intentionally
     # stay unchanged. Changing those breaks the upstream networking engine.
