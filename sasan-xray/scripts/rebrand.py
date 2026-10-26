@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Noncommercial Android branding overlay for a pinned GPLv3 v2rayNG checkout.
 
-Only display identity and Android application ID are changed. Existing package
-names for Kotlin/JNI remain intact. No credentials are embedded.
+Sets Android identity and explicitly selects the Xray-core mode, which upstream
+incorrectly infers from the application ID prefix. Existing Kotlin/JNI packages
+remain intact. No credentials are embedded.
 """
 from pathlib import Path
 import sys
@@ -36,6 +37,15 @@ def main() -> None:
         module / "src/main/AndroidManifest.xml",
         'android:icon="@mipmap/ic_launcher"\n        android:label="@string/app_name"',
         'android:icon="@drawable/sasan_vpn_icon"\n        android:label="@string/app_name"',
+    )
+    # Upstream Utils.isXray() infers the engine from APPLICATION_ID starting
+    # with 'com.v2ray.ang'. Our independently installable app ID breaks that
+    # assumption: it incorrectly enters the v2fly core configuration path,
+    # including different HTTP proxy port handling. This build only uses Xray.
+    replace_once(
+        module / "src/main/java/com/v2ray/ang/util/Utils.kt",
+        'fun isXray(): Boolean = BuildConfig.APPLICATION_ID.startsWith("com.v2ray.ang")',
+        'fun isXray(): Boolean = true',
     )
     # The original Kotlin package and JNI library identifiers intentionally
     # stay unchanged. Changing those breaks the upstream networking engine.
