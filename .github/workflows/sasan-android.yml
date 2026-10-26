@@ -61,13 +61,15 @@ jobs:
             sasan-gradle-${{ runner.os }}-
 
       - name: Prepare Flutter dependencies and Android VPN core
+        # The current upstream Kotlin APIs require the latest core draft;
+        # stable core v4.1.0 fails with unresolved libbox references.
         env:
-          CHANNEL: prod
+          CHANNEL: dev
         run: make android-apk-prepare
 
       - name: Build Android production-mode test APK
-        env:
-          CHANNEL: prod
+        # Build from the production Flutter entrypoint, but use the matching
+        # development core binary in the preceding preparation step.
         # No private credentials are embedded. Signed with the standard Android
         # debug signing fallback when no private signing keys are configured.
         run: flutter build apk --release --target lib/main_prod.dart
