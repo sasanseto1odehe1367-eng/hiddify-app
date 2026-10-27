@@ -1,0 +1,123 @@
+name: SASAN Xray 24.12.31 compatibility APK
+on:
+  push:
+    branches: [feature/sasan-xray-241231-legacy]
+    paths:
+      - 'sasan-legacy/**'
+      - '.github/workflows/sasan-legacy.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch pinned historical client sources
+        uses: actions/checkout@v4
+        with:
+          repository: 2dust/v2rayNG
+          ref: 277894215dccefae8874142cbd84fadd5dc4ce1d
+          path: upstream
+          persist-credentials: false
+      - name: Fetch pinned legacy tun2socks source and submodules
+        uses: actions/checkout@v4
+        with:
+          repository: 2dust/AndroidLibV2rayLite
+          ref: f1c405e6df58f1bc58eafa3440e0fdfcee57a869
+          path: tun-source
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+      - name: Install Android SDK/NDK
+        run: |
+          sdkmanager --install 'platforms;android-35' 'build-tools;35.0.0' 'ndk;27.2.12479018'
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - name: Compile legacy tun2socks
+        working-directory: tun-source
+        run: |
+          bash compile-tun2socks.sh
+          tar -xzf libtun2socks.so.tgz
+          mkdir -p ../upstream/V2rayNG/app/libs
+          cp -r libs/* ../upstream/V2rayNG/app/libs/
+      - name: Fetch matching Xray v24.12.31 library
+        run: |
+          curl -fLSs --retry 3 https://github.com/2dust/AndroidLibXrayLite/releases/download/v24.12.31/libv2ray.aar -o upstream/V2rayNG/app/libs/libv2ray.aar
+          test -s upstream/V2rayNG/app/libs/libv2ray.aar
+          sha256sum upstream/V2rayNG/app/libs/libv2ray.aar
+      - name: Brand SASAN client and maintain Xray mode
+        run: python3 sasan-legacy/rebrand.py upstream
+      - name: Compile Android debug APK
+        working-directory: upstream/V2rayNG
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:assemblePlaystoreDebug --no-daemon --stacktrace
+      - name: Package and validate universal APK for Android phones
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          echo "APK build outputs:"
+          find upstream/V2rayNG/app/build/outputs/apk -type f -name '*.apk' -print
+          # Historical Gradle config emits ABI-specific APKs and one universal
+          # APK. The old workflow chose the FIRST arbitrary APK, which could
+          # be x86 and fail installation on an ARM Android phone.
+          APK=$(find upstream/V2rayNG/app/build/outputs/apk -type f -name '*universal*.apk' -print -quit)
+          if [ -z "$APK" ] || [ ! -s "$APK" ]; then
+            echo "::error::Universal APK missing. Refuse to ship an arbitrary ABI-specific APK."
+            exit 1
+          fi
+          echo "Selected universal APK: $APK"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          "$AAPT" dump badging "$APK" | grep -E '^(package:|sdkVersion:|targetSdkVersion:|native-code:)'
+          "$APKSIGNER" verify --verbose "$APK"
+          unzip -Z1 "$APK" | grep -m1 -E '^lib/arm64-v8a/' || {
+            echo "::error::ARM64 native libraries missing from selected APK"
+            exit 1
+          }
+          cp "$APK" dist/SASAN-Xray-24.12.31-universal-debug.apk
+          (cd dist && sha256sum SASAN-Xray-24.12.31-universal-debug.apk > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SASAN-Xray-24.12.31-test
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  install-smoke-test:
+    name: Confirm APK installation in Android emulator
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Download assembled universal APK
+        uses: actions/download-artifact@v4
+        with:
+          name: SASAN-Xray-24.12.31-test
+          path: dist
+      - name: Enable Android emulator acceleration
+        run: |
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+      - name: Test package installation on Android 14 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect
+          script: |
+            set -eu
+            adb install -r dist/SASAN-Xray-24.12.31-universal-debug.apk
+            adb shell pm path com.sasanvpn.xraylegacy
+            adb shell am start -n com.sasanvpn.xraylegacy/com.v2ray.ang.ui.MainActivity
+            sleep 5
+            adb shell dumpsys activity activities | grep -E 'com.sasanvpn.xraylegacy|com.v2ray.ang.ui.MainActivity' | head -20
