@@ -27,7 +27,7 @@ class NativeVpnService : VpnService(), PlatformInterface, CommandServerHandler {
         }
     }
     private fun foreground() {
-        val notice = Notification.Builder(this, "vpn")
+        val notice = android.app.Notification.Builder(this, "vpn")
             .setContentTitle("SASAN VPN").setContentText("VPN session running")
             .setSmallIcon(android.R.drawable.ic_lock_lock).build()
         startForeground(21, notice)
@@ -53,7 +53,7 @@ class NativeVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                         engine = server
                         server.start()
                         val config = profile.config()
-                        server.checkConfig(config)
+                        Libbox.checkConfig(config)
                         server.startOrReloadService(config, OverrideOptions())
                         state("Tunnel running; verify actual websites")
                     } catch (e: Exception) {
@@ -100,8 +100,8 @@ class NativeVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     override fun startDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) {}
     override fun closeDefaultInterfaceMonitor(listener: InterfaceUpdateListener?) {}
     override fun clearDNSCache() {}
-    override fun systemCertificates(): StringIterator? = null
-    override fun sendNotification(notification: io.nekohasekai.libbox.Notification?) {}
+    override fun sendNotification(notification: io.nekohasekai.libbox.Notification) {}
+    override fun cancelNotification(identifier: String, typeID: Int) {}
     override fun localDNSTransport(): LocalDNSTransport? = null
     override fun serviceReload() {}
     override fun serviceStop() { state("Service stopped") }
