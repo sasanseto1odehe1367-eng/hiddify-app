@@ -19,7 +19,7 @@ allowed = {
     "android.permission.INTERNET",
     "android.permission.ACCESS_NETWORK_STATE",
     "android.permission.FOREGROUND_SERVICE",
-    "android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED",
+    "android.permission.FOREGROUND_SERVICE_SPECIAL_USE",
 }
 declared = {n.attrib[ns + "name"] for n in root.findall("uses-permission")}
 assert declared == allowed, f"Unexpected source permissions: {declared ^ allowed}"
@@ -31,7 +31,9 @@ service = app.find("service")
 assert service is not None
 assert service.attrib.get(ns + "exported") == "true"
 assert service.attrib.get(ns + "permission") == "android.permission.BIND_VPN_SERVICE"
-assert service.attrib.get(ns + "foregroundServiceType") == "systemExempted"
+assert service.attrib.get(ns + "foregroundServiceType") == "specialUse"
+prop = service.find("property")
+assert prop is not None and prop.attrib.get(ns + "name") == "android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
 meta = service.find("meta-data")
 assert meta is not None
 assert meta.attrib.get(ns + "name") == "android.net.VpnService.SUPPORTS_ALWAYS_ON"
