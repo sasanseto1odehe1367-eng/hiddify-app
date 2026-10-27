@@ -126,5 +126,6 @@ class NativeVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     override fun serviceStop() { state("Service stopped") }
     override fun getSystemProxyStatus(): SystemProxyStatus? = null
     override fun setSystemProxyEnabled(enabled: Boolean) {}
+    override fun connectSSHAgent(): Int = -1
     override fun writeDebugMessage(message: String?) {}
 }
