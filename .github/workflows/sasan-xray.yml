@@ -86,10 +86,14 @@ jobs:
         run: |
           find upstream/V2rayNG/app/build/outputs/apk -name '*.apk' -type f -print
           mkdir -p dist
-          APK=$(find upstream/V2rayNG/app/build/outputs/apk/playstore/debug -name '*.apk' -type f | head -n 1)
-          test -n "$APK" && test -s "$APK"
-          cp "$APK" dist/SASAN-Xray-Android-debug.apk
-          (cd dist && sha256sum SASAN-Xray-Android-debug.apk > SHA256SUMS.txt)
+          OUT=upstream/V2rayNG/app/build/outputs/apk/playstore/debug
+          UNIVERSAL=$(find "$OUT" -name '*universal.apk' -type f -print -quit)
+          ARM64=$(find "$OUT" -name '*arm64-v8a.apk' -type f -print -quit)
+          test -n "$UNIVERSAL" && test -s "$UNIVERSAL"
+          test -n "$ARM64" && test -s "$ARM64"
+          cp "$UNIVERSAL" dist/SASAN-Xray-Android-universal-debug.apk
+          cp "$ARM64" dist/SASAN-Xray-Android-arm64-debug.apk
+          (cd dist && sha256sum SASAN-Xray-Android-*-debug.apk > SHA256SUMS.txt)
 
       - name: Upload debug APK for device testing
         uses: actions/upload-artifact@v4
