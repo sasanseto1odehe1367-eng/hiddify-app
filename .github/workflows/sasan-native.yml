@@ -32,13 +32,14 @@ jobs:
           echo '13fbeabcb4622250762afa1b137daaba861a4dc1875643d18621339912f32330  sasan-native/app/libs/libbox.aar' | sha256sum -c -
       - name: Build custom native Android app
         working-directory: sasan-native
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: gradle :app:assembleDebug :app:lintDebug --no-daemon --stacktrace
       - name: Inspect APK
         run: |
           mkdir dist
           APK=sasan-native/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          python3 sasan-native/tools/audit_apk.py "$APK" "$ANDROID_HOME/build-tools/35.0.0/aapt"
           "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E '^(package:|sdkVersion:|native-code:)'
           cp "$APK" dist/SASAN-Native-Android9-test.apk
           (cd dist && sha256sum SASAN-Native-Android9-test.apk > SHA256SUMS.txt)

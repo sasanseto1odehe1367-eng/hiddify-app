@@ -57,12 +57,12 @@ class NativeVpnService : VpnService(), PlatformInterface, CommandServerHandler {
                         server.startOrReloadService(config, OverrideOptions())
                         state("Tunnel running; verify actual websites")
                     } catch (e: Exception) {
-                        state("Error: " + e.javaClass.simpleName + ": " + (e.message ?: "unknown").take(160))
                         shutdown()
+                        state("VPN failed: " + e.javaClass.simpleName)
                         stopSelf()
                     }
                 }.start()
-                return START_STICKY
+                return START_NOT_STICKY
             }
         }
         return START_NOT_STICKY
@@ -126,7 +126,7 @@ class NativeVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     override fun serviceStop() { state("Service stopped") }
     override fun getSystemProxyStatus(): SystemProxyStatus? = null
     override fun setSystemProxyEnabled(enabled: Boolean) {}
-    override fun triggerNativeCrash() { error("Native crash disabled") }
+    override fun triggerNativeCrash() { /* Disable diagnostic crash in user-facing builds. */ }
     override fun connectSSHAgent(): Int = -1
     override fun writeDebugMessage(message: String?) {}
 }

@@ -12,11 +12,17 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <service android:name=".NativeVpnService" android:exported="false"
+        <!-- Android must be able to bind; the signature-level BIND_VPN_SERVICE
+             permission restricts which external callers can use the service. -->
+        <service android:name=".NativeVpnService" android:exported="true"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService"/>
             </intent-filter>
+            <!-- This prototype does not restore connections across reboots.
+                 Do not advertise an Always-on VPN that may silently disconnect. -->
+            <meta-data android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
+                android:value="false"/>
         </service>
     </application>
 </manifest>
