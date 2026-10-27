@@ -4,11 +4,11 @@ plugins {
 }
 android {
     namespace = "com.sasan.vpn"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.sasanvpn.nativeclient"
         minSdk = 26
-        targetSdk = 32
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-test"
         ndk { abiFilters += listOf("arm64-v8a") }
