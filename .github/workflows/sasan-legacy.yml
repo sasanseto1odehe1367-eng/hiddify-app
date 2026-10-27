@@ -91,3 +91,33 @@ jobs:
           path: dist/
           if-no-files-found: error
           retention-days: 7
+
+  install-smoke-test:
+    name: Confirm APK installation in Android emulator
+    needs: android
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Download assembled universal APK
+        uses: actions/download-artifact@v4
+        with:
+          name: SASAN-Xray-24.12.31-test
+          path: dist
+      - name: Enable Android emulator acceleration
+        run: |
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+      - name: Test package installation on Android 14 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect
+          script: |
+            set -eu
+            adb install -r dist/SASAN-Xray-24.12.31-universal-debug.apk
+            adb shell pm path com.sasanvpn.xraylegacy
+            adb shell am start -n com.sasanvpn.xraylegacy/com.v2ray.ang.ui.MainActivity
+            sleep 5
+            adb shell dumpsys activity activities | grep -E 'com.sasanvpn.xraylegacy|com.v2ray.ang.ui.MainActivity' | head -20
