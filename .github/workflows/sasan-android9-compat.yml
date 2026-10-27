@@ -1,0 +1,60 @@
+name: SASAN VPN Legacy — Android 9 install test
+
+on:
+  push:
+    branches: [feature/sasan-xray-241231-legacy]
+    paths: ['.github/workflows/sasan-android9-compat.yml']
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  android9-install:
+    name: Install Universal APK on Android 9 (API 28)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - name: Download exact previously built Universal APK
+        uses: actions/download-artifact@v4
+        with:
+          name: SASAN-Xray-24.12.31-test
+          run-id: 40423951867
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: apk
+
+      - name: Confirm original APK exists
+        run: |
+          test -s apk/SASAN-Xray-24.12.31-universal-debug.apk
+          sha256sum apk/SASAN-Xray-24.12.31-universal-debug.apk
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Enable emulator acceleration
+        run: |
+          if [ -e /dev/kvm ]; then sudo chmod 666 /dev/kvm; fi
+
+      - name: Install and launch on Android 9
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 28
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-snapshot -gpu swiftshader_indirect
+          script: |
+            set -eu
+            echo "Device OS:"
+            adb shell getprop ro.build.version.release
+            adb shell getprop ro.product.cpu.abilist
+            echo "Install (must print Success or actionable INSTALL_FAILED error):"
+            adb install -r apk/SASAN-Xray-24.12.31-universal-debug.apk
+            adb shell pm path com.sasanvpn.xraylegacy
+            adb shell am start -n com.sasanvpn.xraylegacy/com.v2ray.ang.ui.MainActivity
+            sleep 7
+            adb shell dumpsys activity activities | grep -E 'com.sasanvpn.xraylegacy|com.v2ray.ang.ui.MainActivity' | head -20
