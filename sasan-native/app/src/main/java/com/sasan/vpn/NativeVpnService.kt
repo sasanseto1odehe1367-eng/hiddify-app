@@ -102,6 +102,25 @@ class NativeVpnService : VpnService(), PlatformInterface, CommandServerHandler {
     override fun clearDNSCache() {}
     override fun sendNotification(notification: io.nekohasekai.libbox.Notification) {}
     override fun cancelNotification(identifier: String, typeID: Int) {}
+    override fun registerMyInterface(name: String?) {}
+    override fun usePlatformBridge(): Boolean = false
+    override fun createBridge(options: BridgeOptions?): BridgeSession = error("Platform bridge unsupported")
+    override fun usePlatformShell(): Boolean = false
+    override fun checkPlatformShell() { error("Platform shell unsupported") }
+    override fun openShellSession(
+        user: PlatformUser?,
+        command: String?,
+        environ: StringIterator?,
+        term: String?,
+        rows: Int,
+        cols: Int
+    ): ShellSession = error("Platform shell unsupported")
+    override fun lookupUser(username: String?): PlatformUser = error("No user lookup")
+    override fun lookupSFTPServer(): String = error("SFTP unsupported")
+    override fun readSystemSSHHostKey(): String = error("SSH unsupported")
+    override fun tailscaleHostname(): String = error("Tailscale unsupported")
+    override fun startNeighborMonitor(listener: NeighborUpdateListener?) {}
+    override fun closeNeighborMonitor(listener: NeighborUpdateListener?) {}
     override fun localDNSTransport(): LocalDNSTransport? = null
     override fun serviceReload() {}
     override fun serviceStop() { state("Service stopped") }
